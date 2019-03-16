@@ -1,0 +1,114 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginxsvc
+  namespace: traffic-sample
+  annotations:
+    getambassador.io/config: |
+      ---
+      apiVersion: ambassador/v1
+      kind:  Mapping
+      name:  nginx1-mapping
+      prefix:  /nginx/
+      service: nginx1svc.traffic-sample
+      ---
+      apiVersion: ambassador/v1
+      kind:  Mapping
+      name:  nginx2-mapping
+      prefix:  /nginx/
+      service: nginx2svc.traffic-sample
+      weight: 20
+spec:
+  ports:
+  - name: http-nginx
+    port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx1svc
+  namespace: traffic-sample
+#  annotations:
+#    getambassador.io/config: |
+#      ---
+#      apiVersion: ambassador/v0
+#      kind:  Mapping
+#      name:  green-shadow-mapping
+#      prefix:  /blue/
+#      service: green-version-shadow.traffic-sample
+#      shadow: true
+spec:
+  ports:
+  - name: http-nginx1
+    port: 80
+    targetPort: nginx1
+  selector:
+    app: nginx1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx2svc
+  namespace: traffic-sample
+spec:
+  ports:
+  - name: http-nginx2
+    port: 80
+    targetPort: nginx2
+  selector:
+    app: nginx2
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx1
+  namespace: traffic-sample
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx1
+  template:
+    metadata:
+      labels:
+        app: nginx1
+    spec:
+      imagePullSecrets:
+        - name: registry
+        - name: private-registry
+      containers:
+      - name: nginx1
+#        image: nginx
+        image: private-registry.micropaas.accenture.com/sample/nginx-bg:v1
+        ports:
+        - containerPort: 80
+          name: nginx1 
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx2
+  namespace: traffic-sample
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx2
+  template:
+    metadata:
+      labels:
+        app: nginx2
+    spec:
+      imagePullSecrets:
+        - name: registry
+        - name: private-registry
+      containers:
+      - name: nginx2
+#        image: nginx
+        image: private-registry.micropaas.accenture.com/sample/nginx-bg:v2
+        ports:
+        - containerPort: 80
+          name: nginx2

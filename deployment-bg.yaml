@@ -1,0 +1,48 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blue-version
+  namespace: traffic-sample
+  annotations:
+    getambassador.io/config: |
+      ---
+      apiVersion: ambassador/v0
+      kind:  Mapping
+      name:  blue-mapping
+      prefix:  /blue/
+      service: blue-version.traffic-sample
+spec:
+  ports:
+  - name: http-bg
+    port: 80
+    targetPort: bg
+  selector:
+    app: bg
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: bg
+  namespace: traffic-sample
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bg
+  template:
+    metadata:
+      labels:
+        app: bg
+    spec:
+      imagePullSecrets:
+        - name: registry
+        - name: private-registry
+      containers:
+      - name: bg
+#        image: nginx
+        image: private-registry.micropaas.accenture.com/sample/nginx-bg:v1
+        ports:
+        - containerPort: 80
+          name: bg
